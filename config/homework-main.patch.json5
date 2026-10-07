@@ -1,4 +1,6 @@
 // Gateway A (service `openclaw`): Chief of Staff on Telegram + Generalist with read-only MCP.
+// main reaches both teammates over A2A (scripts/a2a_ask.py): generalist on this gateway,
+// cto on gateway B. sessions_spawn children never get MCP tools (openclaw#85030).
 // Apply after `docker/init.py openclaw`:
 //   docker compose exec openclaw openclaw config patch --file /project/config/homework-main.patch.json5
 {
@@ -20,6 +22,18 @@
   tools: {
     deny: ["edit", "apply_patch", "group:automation", "group:web", "group:ui", "group:messaging", "group:nodes", "sessions_send"],
   },
+  channels: {
+    a2a: {
+      enabled: true,
+      exposeAgents: ["generalist"],
+      replyTimeoutMs: 600000,
+      peers: { main: { token: "${A2A_GENERALIST_TOKEN}" } },
+    },
+  },
+  bindings: [
+    { agentId: "main", match: { channel: "telegram" } },
+    { agentId: "generalist", match: { channel: "a2a" } },
+  ],
   mcp: {
     servers: {
       github: {
@@ -36,7 +50,7 @@
   agents: {
     entries: {
       // CTO lives on gateway B; main reaches it only through scripts/a2a_ask.py.
-      main: { skills: ["ticket-impact"], subagents: { allowAgents: ["generalist"] }, tools: { deny: ["*__*"] } },
+      main: { skills: ["ticket-impact"], tools: { deny: ["*__*", "sessions_spawn"] } },
       generalist: { tools: { alsoAllow: ["github__*", "jira__*"] } },
       cto: { tools: { deny: ["*__*"] } },
       swe: { tools: { deny: ["*__*"] } },

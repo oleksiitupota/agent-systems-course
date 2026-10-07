@@ -12,6 +12,8 @@ MODEL="${HOMEWORK_MODEL:-anthropic/claude-sonnet-5-5}"
 if [ "${1:-}" = env ]; then
   umask 077
   grep -E '^(ANTHROPIC_API_KEY|A2A_CTO_TOKEN)=' .local/openclaw.env > .local/cto.env
+  [ -z "$(tail -c1 .local/openclaw.env)" ] || echo >> .local/openclaw.env  # keep the last key intact
+  grep -q '^A2A_GENERALIST_TOKEN=' .local/openclaw.env || printf 'A2A_GENERALIST_URL=http://127.0.0.1:18789/a2a/v1\nA2A_GENERALIST_TOKEN=%s\n' "$(openssl rand -hex 32)" >> .local/openclaw.env
   grep -q '^OPENCLAW_CTO_GATEWAY_TOKEN=' .env || echo "OPENCLAW_CTO_GATEWAY_TOKEN='$(openssl rand -hex 32)'" >> .env
   echo "Wrote .local/cto.env ($(wc -l < .local/cto.env | tr -d ' ') keys) and the CTO dashboard token in .env."
   exit 0
@@ -31,7 +33,7 @@ oc openclaw channels add --channel telegram --agent main --use-env
 oc openclaw config set channels.telegram.dmPolicy pairing
 oc openclaw config set channels.telegram.groupPolicy disabled
 # main may run only the A2A helper, not python3 in general.
-oc openclaw approvals allowlist add --agent main /project/scripts/a2a_ask.py
+oc openclaw approvals allowlist add --agent main /project/scripts/a2a_ask.py  # both teammates
 
 echo "== openclaw-cto (gateway B: cto over A2A)"
 oc openclaw-cto config patch --file /project/config/homework-cto.patch.json5

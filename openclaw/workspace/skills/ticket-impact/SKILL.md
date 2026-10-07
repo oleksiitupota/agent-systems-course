@@ -1,6 +1,6 @@
 ---
 name: ticket-impact
-description: Build an impact report for one or more tickets (Jira keys like ABC-123 or GitHub issues like owner/repo#12). Use when the user sends ticket ids and asks for impact, risks, or "what does this touch". Generalist gathers requirements, CTO analyses the code over A2A, you merge and reply.
+description: Build an impact report for one or more tickets (Jira keys like ABC-123 or GitHub issues like owner/repo#12). Use when the user sends ticket ids and asks for impact, risks, or "what does this touch". Generalist gathers requirements and CTO analyses the code, both over A2A; you merge and reply.
 ---
 
 # Ticket impact
@@ -14,8 +14,9 @@ Reply in the user's language. Keep the English section names below.
 2. Before the loop, `memory_search` for `knowledge/risks.md` and each id. Reuse
    known risks; say which ones came from memory.
 3. Process tickets **one at a time**. For each ticket:
-   1. Delegate to `generalist` (`sessions_spawn`, then `sessions_yield`) with:
-      "Read <id> with the jira or github MCP tools. Return: title, goal,
+   1. Ask Generalist over A2A:
+      `/project/scripts/a2a_ask.py generalist "<brief>"`
+      Brief: "Read <id> with the jira or github MCP tools. Return: title, goal,
       acceptance criteria, linked tickets, components or files named. Facts
       only, mark anything missing."
    2. Send the generalist's result to CTO over A2A:
