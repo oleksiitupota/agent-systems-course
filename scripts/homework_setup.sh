@@ -1,8 +1,8 @@
 #!/bin/sh
 # Ticket-impact homework.
-#   scripts/homework_setup.sh env   before `docker compose up`: writes .local/cto.env and OPENCLAW_CTO_GATEWAY_TOKEN
+#   scripts/homework_setup.sh env   before `docker compose up`: A2A tokens, .local/cto.env, OPENCLAW_CTO_GATEWAY_TOKEN
 #   scripts/homework_setup.sh       after `docker compose up -d openclaw openclaw-cto phoenix`
-# Needs in .local/openclaw.env: ANTHROPIC_API_KEY, TELEGRAM_BOT_TOKEN, GITHUB_MCP_TOKEN, A2A_CTO_URL, A2A_CTO_TOKEN.
+# Needs in .local/openclaw.env: ANTHROPIC_API_KEY, TELEGRAM_BOT_TOKEN, GITHUB_MCP_TOKEN (the env step adds A2A tokens).
 # Safe to re-run.
 set -eu
 cd "$(dirname "$0")/.."
@@ -11,9 +11,10 @@ MODEL="${HOMEWORK_MODEL:-anthropic/claude-sonnet-5-5}"
 # Gateway B gets only the two secrets it needs (see openclaw-cto in docker-compose.yml).
 if [ "${1:-}" = env ]; then
   umask 077
-  grep -E '^(ANTHROPIC_API_KEY|A2A_CTO_TOKEN)=' .local/openclaw.env > .local/cto.env
   [ -z "$(tail -c1 .local/openclaw.env)" ] || echo >> .local/openclaw.env  # keep the last key intact
+  grep -q '^A2A_CTO_TOKEN=' .local/openclaw.env || printf 'A2A_CTO_URL=http://openclaw-cto:18789/a2a/v1\nA2A_CTO_TOKEN=%s\n' "$(openssl rand -hex 32)" >> .local/openclaw.env
   grep -q '^A2A_GENERALIST_TOKEN=' .local/openclaw.env || printf 'A2A_GENERALIST_URL=http://127.0.0.1:18789/a2a/v1\nA2A_GENERALIST_TOKEN=%s\n' "$(openssl rand -hex 32)" >> .local/openclaw.env
+  grep -E '^(ANTHROPIC_API_KEY|A2A_CTO_TOKEN)=' .local/openclaw.env > .local/cto.env
   grep -q '^OPENCLAW_CTO_GATEWAY_TOKEN=' .env || echo "OPENCLAW_CTO_GATEWAY_TOKEN='$(openssl rand -hex 32)'" >> .env
   echo "Wrote .local/cto.env ($(wc -l < .local/cto.env | tr -d ' ') keys) and the CTO dashboard token in .env."
   exit 0

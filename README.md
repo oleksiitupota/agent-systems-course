@@ -1,5 +1,7 @@
 # OpenClaw agent team and Hermes
 
+> **Homework:** the ticket-impact team (Telegram, A2A, GitHub MCP, memory, Phoenix tracing) is described in [README-homework.md](README-homework.md).
+
 Give this folder to **Claude Code or Codex** and ask it to work through setup
 step by step with/for you. Start with this prompt:
 
