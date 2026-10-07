@@ -34,3 +34,4 @@ openclaw/workspace/agents/*/MEMORY.md
 **/.trash/
 # Paperclip agent keys never belong in a workspace commit.
 openclaw/workspace/**/paperclip-claimed-api-key.json
+openclaw/workspace/agents/cto/target/

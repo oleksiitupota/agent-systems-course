@@ -1,0 +1,50 @@
+// Gateway A (service `openclaw`): Chief of Staff on Telegram + Generalist with read-only MCP.
+// Apply after `docker/init.py openclaw`:
+//   docker compose exec openclaw openclaw config patch --file /project/config/homework-main.patch.json5
+{
+  plugins: { entries: { "diagnostics-otel": { enabled: true } } },
+  diagnostics: {
+    enabled: true,
+    otel: {
+      enabled: true,
+      tracesEndpoint: "http://phoenix:6006/v1/traces",
+      protocol: "http/protobuf",
+      serviceName: "openclaw-main",
+      traces: true,
+      metrics: false,
+      logs: false,
+      captureContent: true,
+    },
+  },
+  // Same global denylist as config/openclaw.json minus "*__*": MCP tools are granted per agent below.
+  tools: {
+    deny: ["edit", "apply_patch", "group:automation", "group:web", "group:ui", "group:messaging", "group:nodes", "sessions_send"],
+  },
+  mcp: {
+    servers: {
+      github: {
+        url: "https://api.githubcopilot.com/mcp/",
+        transport: "streamable-http",
+        headers: {
+          Authorization: "Bearer ${GITHUB_MCP_TOKEN}",
+          "X-MCP-Readonly": "true",
+          "X-MCP-Toolsets": "issues,repos",
+        },
+      },
+    },
+  },
+  agents: {
+    entries: {
+      // CTO lives on gateway B; main reaches it only through scripts/a2a_ask.py.
+      main: { subagents: { allowAgents: ["generalist"] }, tools: { deny: ["*__*"] } },
+      generalist: { tools: { alsoAllow: ["github__*", "jira__*"] } },
+      cto: { tools: { deny: ["*__*"] } },
+      swe: { tools: { deny: ["*__*"] } },
+      qa: { tools: { deny: ["*__*"] } },
+      "ui-ux": { tools: { deny: ["*__*"] } },
+      content: { tools: { deny: ["*__*"] } },
+      infrastructure: { tools: { deny: ["*__*"] } },
+      sales: { tools: { deny: ["*__*"] } },
+    },
+  },
+}

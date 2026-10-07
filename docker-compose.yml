@@ -1,5 +1,5 @@
 services:
-  openclaw:
+  openclaw: &openclaw
     image: ghcr.io/openclaw/openclaw:2026.9.8-browser
     user: "${HOST_UID:-${WORKSHOP_UID:-1000}}:${HOST_GID:-${WORKSHOP_GID:-1000}}"
     init: true
@@ -38,6 +38,47 @@ services:
       retries: 5
       start_period: 60s
 
+  # Gateway B: CTO exposed over A2A, with the analysed repo mounted read-only.
+  openclaw-cto:
+    <<: *openclaw
+    volumes:
+      - openclaw-cto-state:/home/node/.openclaw
+      - openclaw-cto-secrets:/home/node/.config/openclaw
+      - type: bind
+        source: "${DEMO_PROJECT}"
+        target: /project
+        bind:
+          create_host_path: false
+      - type: bind
+        source: "${TARGET_REPO:?Set TARGET_REPO in .env to the repository CTO analyses}"
+        target: /project/openclaw/workspace/agents/cto/target
+        read_only: true
+    ports:
+      - "127.0.0.1:18791:18789"
+
+  # Tracing UI for both gateways (OTLP/HTTP on 6006).
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    restart: unless-stopped
+    volumes:
+      - phoenix-data:/mnt/data
+    environment:
+      PHOENIX_WORKING_DIR: /mnt/data
+    ports:
+      - "127.0.0.1:6006:6006"
+    networks: [openclaw]
+
+  # Optional Jira MCP for Generalist: docker compose --profile jira up -d
+  jira-mcp:
+    image: ghcr.io/sooperset/mcp-atlassian:latest
+    profiles: [jira]
+    restart: unless-stopped
+    env_file: .local/openclaw.env
+    environment:
+      READ_ONLY_MODE: "true"
+    command: [--transport, streamable-http, --host, 0.0.0.0, --port, "9000"]
+    networks: [openclaw]
+
   hermes:
     image: nousresearch/hermes-agent:v2026.9.24
     restart: unless-stopped
@@ -75,6 +116,9 @@ services:
 volumes:
   openclaw-state:
   openclaw-secrets:
+  openclaw-cto-state:
+  openclaw-cto-secrets:
+  phoenix-data:
   hermes-state:
 networks:
   openclaw:

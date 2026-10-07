@@ -1,0 +1,32 @@
+// Gateway B (service `openclaw-cto`): CTO exposed over A2A, reads the repo mounted at target/.
+//   docker compose exec openclaw-cto openclaw config patch --file /project/config/homework-cto.patch.json5
+{
+  channels: {
+    a2a: {
+      enabled: true,
+      exposeAgents: ["cto"],
+      replyTimeoutMs: 600000,
+      peers: { main: { token: "${A2A_CTO_TOKEN}" } },
+    },
+    // Telegram belongs to gateway A; both polling one bot token conflict.
+    telegram: { enabled: false },
+  },
+  bindings: [{ agentId: "cto", match: { channel: "a2a" } }],
+  gateway: { controlUi: { allowedOrigins: ["http://127.0.0.1:18791", "http://localhost:18791"] } },
+  plugins: { entries: { "diagnostics-otel": { enabled: true } } },
+  diagnostics: {
+    enabled: true,
+    otel: {
+      enabled: true,
+      tracesEndpoint: "http://phoenix:6006/v1/traces",
+      protocol: "http/protobuf",
+      serviceName: "openclaw-cto",
+      traces: true,
+      metrics: false,
+      logs: false,
+      captureContent: true,
+    },
+  },
+  // CTO answers alone here: no delegation, no MCP.
+  agents: { entries: { cto: { tools: { deny: ["sessions_spawn", "subagents"] } } } },
+}

@@ -1,0 +1,5 @@
+// Optional: Jira for Generalist via the `jira-mcp` sidecar (docker compose --profile jira up -d).
+//   docker compose exec openclaw openclaw config patch --file /project/config/homework-jira.patch.json5
+{
+  mcp: { servers: { jira: { url: "http://jira-mcp:9000/mcp", transport: "streamable-http" } } },
+}
