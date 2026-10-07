@@ -1,10 +1,21 @@
 #!/bin/sh
-# Ticket-impact homework: configure both gateways after `docker compose up -d openclaw openclaw-cto phoenix`.
+# Ticket-impact homework.
+#   scripts/homework_setup.sh env   before `docker compose up`: writes .local/cto.env and OPENCLAW_CTO_GATEWAY_TOKEN
+#   scripts/homework_setup.sh       after `docker compose up -d openclaw openclaw-cto phoenix`
 # Needs in .local/openclaw.env: ANTHROPIC_API_KEY, TELEGRAM_BOT_TOKEN, GITHUB_MCP_TOKEN, A2A_CTO_URL, A2A_CTO_TOKEN.
 # Safe to re-run.
 set -eu
 cd "$(dirname "$0")/.."
 MODEL="${HOMEWORK_MODEL:-anthropic/claude-sonnet-5-5}"
+
+# Gateway B gets only the two secrets it needs (see openclaw-cto in docker-compose.yml).
+if [ "${1:-}" = env ]; then
+  umask 077
+  grep -E '^(ANTHROPIC_API_KEY|A2A_CTO_TOKEN)=' .local/openclaw.env > .local/cto.env
+  grep -q '^OPENCLAW_CTO_GATEWAY_TOKEN=' .env || echo "OPENCLAW_CTO_GATEWAY_TOKEN='$(openssl rand -hex 32)'" >> .env
+  echo "Wrote .local/cto.env ($(wc -l < .local/cto.env | tr -d ' ') keys) and the CTO dashboard token in .env."
+  exit 0
+fi
 
 oc() { service=$1; shift; docker compose exec -T "$service" openclaw "$@" 2>&1 | grep -v -i experimentalwarning | tail -1; }
 

@@ -39,16 +39,37 @@ services:
       start_period: 60s
 
   # Gateway B: CTO exposed over A2A, with the analysed repo mounted read-only.
+  # Only its own secrets, a read-only project, and a writable CTO workspace.
   openclaw-cto:
     <<: *openclaw
+    env_file: .local/cto.env
+    environment:
+      HOME: /home/node
+      OPENCLAW_HOME: /home/node
+      XDG_CACHE_HOME: /home/node/.openclaw/cache
+      OPENCLAW_STATE_DIR: /home/node/.openclaw
+      OPENCLAW_CONFIG_PATH: /home/node/.openclaw/openclaw.json
+      # Own dashboard token: gateway A's token must not be usable from here.
+      OPENCLAW_GATEWAY_TOKEN: "${OPENCLAW_CTO_GATEWAY_TOKEN:?Run scripts/homework_setup.sh env first}"
+      OPENCLAW_BROWSER_HEADLESS: "1"
+      HOST_UID: "${HOST_UID:-${WORKSHOP_UID:-1000}}"
+      HOST_GID: "${HOST_GID:-${WORKSHOP_GID:-1000}}"
     volumes:
       - openclaw-cto-state:/home/node/.openclaw
       - openclaw-cto-secrets:/home/node/.config/openclaw
       - type: bind
         source: "${DEMO_PROJECT}"
         target: /project
+        read_only: true
         bind:
           create_host_path: false
+      - type: bind
+        source: "${DEMO_PROJECT}/openclaw/workspace/agents/cto"
+        target: /project/openclaw/workspace/agents/cto
+      # Hide gateway A's secrets that live in the checkout.
+      - type: tmpfs
+        target: /project/.local
+      - /dev/null:/project/.env:ro
       - type: bind
         source: "${TARGET_REPO:?Set TARGET_REPO in .env to the repository CTO analyses}"
         target: /project/openclaw/workspace/agents/cto/target
