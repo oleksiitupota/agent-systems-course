@@ -24,10 +24,9 @@ oc openclaw approvals allowlist add --agent main /project/scripts/a2a_ask.py
 
 echo "== openclaw-cto (gateway B: cto over A2A)"
 oc openclaw-cto config patch --file /project/config/homework-cto.patch.json5
-# Read-only inspection binaries; target/ is a read-only mount.
-for bin in /usr/bin/git /usr/bin/grep /usr/bin/find /usr/bin/head /usr/bin/ls /usr/bin/cat /usr/bin/wc; do
-  oc openclaw-cto approvals allowlist add --agent cto "$bin"
-done
+# CTO may run only the confined inspector: raw git/find/cat could execute commands
+# or read secrets outside the read-only target/ mount.
+oc openclaw-cto approvals allowlist add --agent cto /project/scripts/cto_inspect.py
 
 docker compose restart openclaw openclaw-cto
 echo "Done. Smoke test: docker compose exec openclaw /project/scripts/a2a_ask.py cto 'Reply with your agent id.'"
