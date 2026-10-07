@@ -36,7 +36,7 @@
   agents: {
     entries: {
       // CTO lives on gateway B; main reaches it only through scripts/a2a_ask.py.
-      main: { subagents: { allowAgents: ["generalist"] }, tools: { deny: ["*__*"] } },
+      main: { skills: ["ticket-impact"], subagents: { allowAgents: ["generalist"] }, tools: { deny: ["*__*"] } },
       generalist: { tools: { alsoAllow: ["github__*", "jira__*"] } },
       cto: { tools: { deny: ["*__*"] } },
       swe: { tools: { deny: ["*__*"] } },
