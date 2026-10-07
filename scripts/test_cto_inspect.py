@@ -23,14 +23,21 @@ if __name__ == "__main__":
         subprocess.run(["git", "init", "-q", target], check=True)
 
         assert run(target, "grep", "-n", "token", "a.py").stdout.strip() == "1:token = 1"
-        assert run(target, "head", "-n", "1", "a.py").returncode == 0
+        assert run(target, "head", "-n1", "a.py").returncode == 0
+        assert run(target, "grep", "-rn", "--include=*.py", "token", ".").returncode == 0
         assert run(target, "git", "ls-files").returncode == 0
+        assert run(target, "git", "log", "--oneline", "-5", "--", "a.py").returncode in (0, 128)  # 128: no commits yet
         refused = [
             ("cat", "../secret.env"), ("cat", "/proc/1/environ"), ("cat", "link"),
-            ("grep", "-r", "SECRET", ".."), ("grep", "-f", "../secret.env", "a.py"), ("grep", "x"),
+            ("grep", "-r", "SECRET", ".."), ("grep", "-R", "SECRET", "."), ("grep", "-f", "../secret.env", "a.py"), ("grep", "x"),
             ("find", ".", "-exec", "id", ";"), ("sh", "-c", "id"),
             ("git", "-c", "core.pager=id", "log"), ("git", "log", "-c", "x=y"),
             ("git", "grep", "-Oid", "x"), ("git", "fetch", "--upload-pack=id"), ("git", "config", "-l"),
+            ("grep", "-ex", "/proc/1/environ", "a.py"), ("grep", "-e", "x", "a.py"),
+            ("grep", "--files0-from=../secret.env", "x", "a.py"), ("head", "-c", "9", "/proc/1/environ"),
+            ("git", "diff", "--no-index", "/proc/1/environ", "/dev/null"),
+            ("git", "blame", "--contents", "../secret.env", "a.py"), ("git", "log", "--", "../secret.env"),
+            ("git", "show", "--output=../x"), ("git", "log", "../secret.env"),
         ]
         for args in refused:
             result = run(target, *args)
