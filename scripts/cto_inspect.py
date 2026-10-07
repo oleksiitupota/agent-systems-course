@@ -79,12 +79,17 @@ def check_git(args):
     sub, rest = args[0], args[1:]
     head, pathspecs = (rest[:rest.index("--")], rest[rest.index("--") + 1:]) if "--" in rest else (rest, [])
     _, operands = split_flags(head, GIT_FLAGS[sub])
-    for operand in operands:
-        if NO_REV.search(operand):
-            raise ValueError(f"put paths after --: {operand}")
-    check_paths(pathspecs)
     env = {"PATH": "/usr/bin:/bin", "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": "/dev/null",
            "GIT_PAGER": "cat", "PAGER": "cat", "HOME": "/nonexistent"}
+    # git grep takes the pattern first; every other pre-`--` operand must be a real revision,
+    # so no operand can be read as a path (e.g. `git diff a.py ..` would switch to --no-index).
+    revisions = operands[1:] if sub == "grep" else operands
+    for rev in revisions:
+        verified = subprocess.run(["git", "-C", TARGET, "rev-parse", "--verify", "--quiet", "--end-of-options",
+                                   rev + "^{object}"], env=env, capture_output=True)
+        if NO_REV.search(rev) or verified.returncode != 0:
+            raise ValueError(f"not a revision (put paths after --): {rev}")
+    check_paths(pathspecs)
     return ["git", "--no-pager", "-c", f"safe.directory={TARGET}", "-C", TARGET, *args], env
 
 
