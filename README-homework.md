@@ -133,7 +133,7 @@ Memory after a restart: a new session reads `knowledge/risks.md` with `memory_ge
 | --- | --- | --- |
 | `main` | Telegram, memory, workspace files, run `/project/scripts/a2a_ask.py` | MCP tools, `sessions_spawn`, any other command (exec allowlist) |
 | `generalist` | GitHub MCP in read-only mode, optional Jira MCP (its tool list holds only MCP tools) | Files, shell commands, delegation |
-| `cto` | Run `/project/scripts/cto_inspect.py`: `grep`, `head`, `cat`, `wc`, `ls` and read-only `git` subcommands inside `target/` | Paths outside `target/`, `find`, `git -c`, `--no-index`, `--contents`, unverified revisions, delegation, MCP |
+| `cto` | Run `/project/scripts/cto_inspect.py`: `git grep`/`log`/`show`/`diff`/`blame`/`ls-files`, `cat`/`head`/`grep`/`wc` on git-tracked files, `ls` | Untracked or ignored files (`.env`, `.local/`), paths outside `target/`, `find`, `git -c`, `--no-index`, `--contents`, unverified revisions, delegation, MCP |
 
 Gateway B (`openclaw-cto`) is isolated further:
 
@@ -142,7 +142,7 @@ Gateway B (`openclaw-cto`) is isolated further:
 - The project is mounted read-only, and only the CTO workspace is writable.
 - Gateway A's `.local/` and `.env` are hidden inside the container.
 
-`scripts/test_cto_inspect.py` checks 26 escape attempts. `scripts/test_a2a_ask.py`
+`scripts/test_cto_inspect.py` checks 31 escape attempts, including reads of an ignored `.env` inside `target/`. `scripts/test_a2a_ask.py`
 checks the A2A client against a fake peer.
 
 ```sh

@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """Read-only code inspection for CTO, confined to the mounted target/ repository.
 
-Usage: cto_inspect.py grep [-rniwlcEFHIv...] [--include=GLOB] PATTERN PATH...
-       cto_inspect.py head [-nN] PATH...      cto_inspect.py cat [-n] PATH...
-       cto_inspect.py wc [-lwc] PATH...        cto_inspect.py ls [-laR1h] [PATH...]
+Usage: cto_inspect.py grep [-niwlcEFHIv...] PATTERN FILE...   (search the repo: git grep)
+       cto_inspect.py head [-nN] FILE...      cto_inspect.py cat [-n] FILE...
+       cto_inspect.py wc [-lwc] FILE...        cto_inspect.py ls [-laR1h] [PATH...]
        cto_inspect.py git <log|show|diff|grep|ls-files|blame> [flags] [REV|PATTERN...] [-- PATHSPEC...]
 
 This is the only command CTO may run. Raw git/find/cat would let a prompt
 injected through ticket text run commands (find -exec, git -c core.pager) or
 read secrets outside target/ (/proc/1/environ, .local/openclaw.env). Flags are
-allowlisted per command; anything unknown is refused.
+allowlisted per command; anything unknown is refused. File contents are readable
+only for git-tracked files, so ignored secrets inside target/ (.env, .local/)
+stay out of reach whatever TARGET_REPO points at.
 """
 import os
 import re
@@ -20,7 +22,7 @@ TARGET = os.path.realpath(os.environ.get("CTO_TARGET", "/project/openclaw/worksp
 
 # Flags that never take a file argument. Values only in attached `--x=value` form.
 TOOL_FLAGS = {
-    "grep": r"-[rniwlcEFHhIv]+|--(include|exclude|exclude-dir)=[^/]+|--(line-number|ignore-case|recursive|count|files-with-matches)",
+    "grep": r"-[niwlcEFHhIv]+|--(line-number|ignore-case|count|files-with-matches)",
     "head": r"-n\d+|-\d+",
     "cat": r"-n",
     "wc": r"-[lwc]+",
@@ -35,6 +37,8 @@ GIT_FLAGS = {
     "blame": r"-L\d+(,\d+)?",
 }
 NO_REV = re.compile(r"^[-:]|\.\.\/|^/")  # revisions/patterns may not look like options or outside paths
+GIT_ENV = {"PATH": "/usr/bin:/bin", "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": "/dev/null",
+           "GIT_PAGER": "cat", "PAGER": "cat", "HOME": "/nonexistent"}
 
 
 def inside(path):
@@ -60,6 +64,14 @@ def check_paths(paths):
             raise ValueError(f"path outside target/: {path}")
 
 
+def check_tracked_files(paths):
+    for path in paths:
+        tracked = subprocess.run(["git", "-c", f"safe.directory={TARGET}", "-C", TARGET, "ls-files", "--error-unmatch",
+                                  "--", path], env=GIT_ENV, capture_output=True)
+        if tracked.returncode != 0 or not os.path.isfile(os.path.join(TARGET, path)):
+            raise ValueError(f"not a git-tracked file (use git grep to search): {path}")
+
+
 def check_tool(tool, args):
     _, operands = split_flags(args, TOOL_FLAGS[tool])
     paths = operands
@@ -70,6 +82,8 @@ def check_tool(tool, args):
     elif tool != "ls" and not operands:
         raise ValueError(f"{tool} needs at least one PATH inside target/")
     check_paths(paths)
+    if tool != "ls":
+        check_tracked_files(paths)
     return [tool, *args], {"PATH": "/usr/bin:/bin"}
 
 
@@ -79,8 +93,7 @@ def check_git(args):
     sub, rest = args[0], args[1:]
     head, pathspecs = (rest[:rest.index("--")], rest[rest.index("--") + 1:]) if "--" in rest else (rest, [])
     _, operands = split_flags(head, GIT_FLAGS[sub])
-    env = {"PATH": "/usr/bin:/bin", "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": "/dev/null",
-           "GIT_PAGER": "cat", "PAGER": "cat", "HOME": "/nonexistent"}
+    env = GIT_ENV
     # git grep takes the pattern first; every other pre-`--` operand must be a real revision,
     # so no operand can be read as a path (e.g. `git diff a.py ..` would switch to --no-index).
     revisions = operands[1:] if sub == "grep" else operands

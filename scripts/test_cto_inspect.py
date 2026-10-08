@@ -19,21 +19,24 @@ if __name__ == "__main__":
         os.mkdir(target)
         Path(target, "a.py").write_text("token = 1\n")
         Path(root, "secret.env").write_text("SECRET=1\n")
+        Path(target, ".env").write_text("TOKEN=ignored-secret\n")  # untracked secret inside target/
         os.symlink(os.path.join(root, "secret.env"), os.path.join(target, "link"))
         subprocess.run(["git", "init", "-q", target], check=True)
+        subprocess.run(["git", "-C", target, "add", "a.py"], check=True)
         subprocess.run(["git", "-C", target, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q",
-                        "--allow-empty", "-m", "init"], check=True)
+                        "-m", "init"], check=True)
 
         assert run(target, "grep", "-n", "token", "a.py").stdout.strip() == "1:token = 1"
         assert run(target, "head", "-n1", "a.py").returncode == 0
-        assert run(target, "grep", "-rn", "--include=*.py", "token", ".").returncode == 0
+        assert run(target, "git", "grep", "-n", "token").stdout.strip() == "a.py:1:token = 1"
         assert run(target, "git", "ls-files").returncode == 0
         assert run(target, "git", "log", "--oneline", "-5", "--", "a.py").returncode == 0
         assert run(target, "git", "show", "--stat", "HEAD").returncode == 0
         assert run(target, "git", "grep", "-n", "token", "HEAD").returncode in (0, 1)
         refused = [
             ("cat", "../secret.env"), ("cat", "/proc/1/environ"), ("cat", "link"),
-            ("grep", "-r", "SECRET", ".."), ("grep", "-R", "SECRET", "."), ("grep", "-f", "../secret.env", "a.py"), ("grep", "x"),
+            ("grep", "-r", "SECRET", ".."), ("grep", "-R", "SECRET", "."), ("grep", "-rn", "TOKEN", "."),
+            ("grep", "-n", "TOKEN", ".env"), ("cat", ".env"), ("head", "-n1", ".env"), ("grep", "x", "."), ("grep", "-f", "../secret.env", "a.py"), ("grep", "x"),
             ("find", ".", "-exec", "id", ";"), ("sh", "-c", "id"),
             ("git", "-c", "core.pager=id", "log"), ("git", "log", "-c", "x=y"),
             ("git", "grep", "-Oid", "x"), ("git", "fetch", "--upload-pack=id"), ("git", "config", "-l"),
