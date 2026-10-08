@@ -28,6 +28,7 @@ if __name__ == "__main__":
 
         assert run(target, "grep", "-n", "token", "a.py").stdout.strip() == "1:token = 1"
         assert run(target, "head", "-n1", "a.py").returncode == 0
+        assert run(target, "head", "-n", "1", "a.py").stdout.strip() == "token = 1"
         assert run(target, "git", "grep", "-n", "token").stdout.strip() == "a.py:1:token = 1"
         assert run(target, "git", "ls-files").returncode == 0
         assert run(target, "git", "log", "--oneline", "-5", "--", "a.py").returncode == 0
@@ -36,7 +37,7 @@ if __name__ == "__main__":
         refused = [
             ("cat", "../secret.env"), ("cat", "/proc/1/environ"), ("cat", "link"),
             ("grep", "-r", "SECRET", ".."), ("grep", "-R", "SECRET", "."), ("grep", "-rn", "TOKEN", "."),
-            ("grep", "-n", "TOKEN", ".env"), ("cat", ".env"), ("head", "-n1", ".env"), ("grep", "x", "."), ("grep", "-f", "../secret.env", "a.py"), ("grep", "x"),
+            ("grep", "-n", "TOKEN", ".env"), ("cat", ".env"), ("head", "-n1", ".env"), ("head", "-n", "1", ".env"), ("head", "-n", "../secret.env"), ("grep", "x", "."), ("grep", "-f", "../secret.env", "a.py"), ("grep", "x"),
             ("find", ".", "-exec", "id", ";"), ("sh", "-c", "id"),
             ("git", "-c", "core.pager=id", "log"), ("git", "log", "-c", "x=y"),
             ("git", "grep", "-Oid", "x"), ("git", "fetch", "--upload-pack=id"), ("git", "config", "-l"),

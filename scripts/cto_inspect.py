@@ -69,10 +69,13 @@ def check_tracked_files(paths):
         tracked = subprocess.run(["git", "-c", f"safe.directory={TARGET}", "-C", TARGET, "ls-files", "--error-unmatch",
                                   "--", path], env=GIT_ENV, capture_output=True)
         if tracked.returncode != 0 or not os.path.isfile(os.path.join(TARGET, path)):
-            raise ValueError(f"not a git-tracked file (use git grep to search): {path}")
+            raise ValueError(f"not a git-tracked file (paths are relative to target/; use git grep to search): {path}")
 
 
 def check_tool(tool, args):
+    if tool == "head":  # accept `head -n 40` as well as `head -n40`
+        args = [f"-n{args[i + 1]}" if a == "-n" and i + 1 < len(args) and args[i + 1].isdigit() else a
+                for i, a in enumerate(args) if not (i and args[i - 1] == "-n" and a.isdigit())]
     _, operands = split_flags(args, TOOL_FLAGS[tool])
     paths = operands
     if tool == "grep":

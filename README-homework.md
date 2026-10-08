@@ -64,15 +64,12 @@ docker compose run --rm --no-deps --user 0:0 openclaw-cto python3 /project/docke
 # 5. Start
 docker compose up -d openclaw openclaw-cto phoenix
 
-# 6. One-time onboarding per gateway (interactive): keep the workspace
-#    /project/openclaw/workspace, skip channels and host service installation.
-docker compose exec openclaw     openclaw onboard --no-install-daemon --skip-bootstrap
-docker compose exec openclaw-cto openclaw onboard --no-install-daemon --skip-bootstrap
-
-# 7. Homework configuration: model, A2A, MCP, Telegram, exec allowlists, tracing
+# 6. Homework configuration: model + API key, A2A, MCP, Telegram, exec allowlists, tracing
+#    (no interactive onboarding needed; the gateways restart at the end)
 ./scripts/homework_setup.sh
 
-# 8. Smoke test: both A2A peers answer
+# 7. Smoke test: wait for both agent cards, then both A2A peers reply
+until curl -fs localhost:18789/.well-known/agent-card.json >/dev/null && curl -fs localhost:18791/.well-known/agent-card.json >/dev/null; do sleep 5; done
 docker compose exec openclaw /project/scripts/a2a_ask.py cto 'Reply with your agent id.'
 docker compose exec openclaw /project/scripts/a2a_ask.py generalist 'Reply with your agent id.'
 ```
@@ -149,7 +146,7 @@ Gateway B (`openclaw-cto`) is isolated further:
 - The project is mounted read-only, and only the CTO workspace is writable.
 - Gateway A's `.local/` and `.env` are hidden inside the container.
 
-`scripts/test_cto_inspect.py` checks 31 escape attempts, including reads of an ignored `.env` inside `target/`. `scripts/test_a2a_ask.py`
+`scripts/test_cto_inspect.py` checks 33 escape attempts, including reads of an ignored `.env` inside `target/`. `scripts/test_a2a_ask.py`
 checks the A2A client against a fake peer.
 
 ```sh
