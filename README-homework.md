@@ -111,6 +111,13 @@ docker compose exec openclaw openclaw pairing approve telegram <CODE>
 
 ## Screenshots
 
+Telegram: the report for ticket #1 (Summary, Impact with `file:line`, Risks, Open questions).
+
+<p>
+  <img src="docs/images/telegram-report-1.png" width="49%" alt="Telegram report for #1, part 1">
+  <img src="docs/images/telegram-report-2.png" width="49%" alt="Telegram report for #1, part 2">
+</p>
+
 Telegram run on gateway A: the channel, the agent, the skill, model calls and tool calls.
 
 ![Telegram run trace](docs/images/phoenix-telegram-run.jpg)
